@@ -1,0 +1,13 @@
+Installer git 
+
+Kernel Jupiter
+
+IPY Kernel
+
+Transformers
+Requirement.txt
+Tf-keras
+Secret 
+
+Numpy.core.multiarray fail to import
+Solution : pip Install numpy < 2
