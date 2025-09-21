@@ -1,0 +1,1 @@
+Le dataset généré est désordonné ?? classe 1 et 2 sont background. je regénère.
