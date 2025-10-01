@@ -5,8 +5,6 @@ Mon repo a moi
 
 la todo
 
-- [ ] régler et réparer la génération         
-- [ ] entraîner et évaluer (évaluation) 
 - [ ] faire une liste claire des expériences    
 - [ ] mettre les articles intéressants dans le git  
 - [ ] trouver le claim  
@@ -15,3 +13,5 @@ la todo
 done:
 
 - [x] pre-processing
+- [x] régler et réparer la génération         
+- [x] entraîner et évaluer (évaluation) 
