@@ -3,10 +3,12 @@ Mon repo a moi
 
 la todo
 
-- [ ] faire une liste claire des expériences    
+- [ ] faire une liste claire des expériences
+    - [ ] reasoning foiré !!! >:-C
+    - [ ]    
 - [ ] mettre les articles intéressants dans le git  
-- [ ] trouver le claim  
-- [ ] rédiger en même temps ! (pendant la génération par exemple)   
+- [x] trouver le claim (synth data is cheaper and as efficient at scale.)  
+- [x] rédiger en même temps ! (pendant la génération par exemple)   
 
 done:
 
