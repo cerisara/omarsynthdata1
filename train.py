@@ -43,24 +43,35 @@ mlp = nn.Sequential(
 
 labs = [torch.LongTensor([x]) for x in range(nclass)]
 lossf = nn.CrossEntropyLoss()
-opt = torch.optim.Adam(mlp.parameters(),lr=0.0001)
+opt = torch.optim.Adam(mlp.parameters(),lr=0.00002)
 for ep in range(1000):
     random.shuffle(es)
-    opt.zero_grad()
+    xi=0
     for lab,x in es:
+        opt.zero_grad()
         y=mlp(x)
         loss = lossf(y.view(1,-1),labs[lab].view(1,))
-        print("LOSS",loss.item(),ep)
+        print("LOSS",loss.item(),ep,xi)
         loss.backward()
         opt.step()
+        xi += 1
 
     with torch.no_grad():
         nok,ntot=0,0
+        nokc = [0]*nclass
+        ntotc = [0]*nclass
         for lab,x in testset:
             y=mlp(x)
             cpred = torch.argmax(y)
-            if cpred.item()==lab: nok+=1            
+            if cpred.item()==lab:
+                nokc[lab]+=1
+                nok+=1            
             ntot += 1
-            acc = float(nok)/float(ntot)
-            print("ACC",acc,ntot,cpred,lab)
+            ntotc[lab]+=1
+            print("REC",ep,cpred.item(),lab)
+        acc = float(nok)/float(ntot)
+        print("ACC",acc,ntot)
+        for ci in range(nclass):
+            acc = float(nokc[ci])/float(ntotc[ci])
+            print("ACL"+str(ci),acc,ntotc[ci])
 
