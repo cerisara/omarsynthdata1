@@ -38,7 +38,7 @@ with open("ds6.txt","r") as f:
                 e[j] += vs[i][j]
         for j in range(len(e)): e[j] /= float(len(vs))
         es.append(torch.tensor(e))
-        if len(es)>520: break
+        if len(es)>1200: break
 
 with open("shuffledds6.csv","r") as f:
     for i,l in enumerate(f):
