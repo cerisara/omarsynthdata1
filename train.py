@@ -18,7 +18,7 @@ with open("ds6.txt","r") as f:
                 e[j] += vs[i][j]
         for j in range(len(e)): e[j] /= float(len(vs))
         es.append(torch.tensor(e))
-        if len(es)>300: break
+        if len(es)>10200: break
 
 with open("shuffledds6.csv","r") as f:
     for i,l in enumerate(f):
@@ -38,6 +38,8 @@ print("data",nsamp,dim,nclass)
 mlp = nn.Sequential(
     nn.Linear(dim, 256),
     nn.ReLU(),              # or nn.GELU() for Transformer-style
+    nn.Linear(256, 256),
+    nn.ReLU(),              
     nn.Linear(256, nclass)
 )
 
