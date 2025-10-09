@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+
 citation_dict={
         0:"BACKGROUND",
         1:"USES",
@@ -27,9 +30,30 @@ def prepval():
             g.write(str(embeddings)+'\n')
             g.flush()
 
-prepval()
-exit()
+def loadval():
+    with open("aclarcval.lab","r") as f: labs=[int(s) for s in f]
+    es=[]
+    with open("aclarcval.txt","r") as f:
+        for li, l in enumerate(f):
+            s=l.replace('[','').strip().split(']')
+            vs=[]
+            for i in range(len(s)):
+                ss=s[i].strip().split(',')
+                v=[float(x) for x in ss if len(x)>0]
+                if len(v)>0: vs.append(v)
+            e = [0.]*len(vs[0])
+            for i in range(len(vs)):
+                for j in range(len(e)):
+                    e[j] += vs[i][j]
+            for j in range(len(e)): e[j] /= float(len(vs))
+            es.append(torch.tensor(e))
+    return es,labs
 
+# prepval()
+es,labs = loadval()
+nclass = max(labs)+1
+dim = es[0].shape[0]
+print("valdata",len(es),nclass,dim)
 
 mlp = nn.Sequential(
     nn.Linear(dim, 256),
@@ -39,10 +63,23 @@ mlp = nn.Sequential(
     nn.Linear(256, nclass)
 )
 
-for i in range(len(val)):
-
-
 with torch.no_grad():
-    validation_outputs = mymodel(validation_data.float())
-    #test_outputs = mymodel(test_data)
-    print(classification_report(validation['intent'], torch.argmax(validation_outputs, axis=1)))
+    nok,ntot=0,0
+    nokc = [0]*nclass
+    ntotc = [0]*nclass
+    for i in range(len(es)):
+        y=mlp(es[i])
+        cpred = torch.argmax(y)
+        lab = labs[i]
+        if cpred.item()==lab:
+            nokc[lab]+=1
+            nok+=1
+        ntot += 1
+        ntotc[lab]+=1
+        print("REC",cpred.item(),lab)
+    acc = float(nok)/float(ntot)
+    print("ACC",acc,ntot)
+    for ci in range(nclass):
+        acc = float(nokc[ci])/float(ntotc[ci])
+        print("ACL"+str(ci),acc,ntotc[ci])
+
