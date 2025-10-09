@@ -13,4 +13,11 @@ QR2: est-ce que les synth data "couvrent" bien les classes du corpus ?
     ==> Non: ACC sur corpus tres faible
 
 XP: etudier la "couverture" des embeddings, entre le corpus et les synth data
+==> tSNE montre que les embeddings synth et du corpus sont separes
+mais c'est peut-etre normal: car ils ont une semantique differente. Mais en fait non, car
+ils devraient etre repartis dans tout l'espace ! Or, ils sont groupes et separes des autres.
+==> conclusion: les synth data representent mal les data du corpus
+
+TODO: embed ACL-train sur ADAE
+TODO: QR = est-ce que train sur une distrib synth tres differente de la distrib ACL-ARC limite les perfs ?
 
