@@ -22,7 +22,27 @@ def loadval():
             es.append(e)
     print("evaldata",' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
     return es,labs
-
+ 
+def loadtrain():
+    with open("aclarctrain.lab","r") as f: labs=[int(s) for s in f]
+    es=[]
+    with open("aclarctrain.txt","r") as f:
+        for li, l in enumerate(f):
+            s=l.replace('[','').strip().split(']')
+            vs=[]
+            for i in range(len(s)):
+                ss=s[i].strip().split(',')
+                v=[float(x) for x in ss if len(x)>0]
+                if len(v)>0: vs.append(v)
+            e = [0.]*len(vs[0])
+            for i in range(len(vs)):
+                for j in range(len(e)):
+                    e[j] += vs[i][j]
+            for j in range(len(e)): e[j] /= float(len(vs))
+            es.append(e)
+    print("traindata",' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
+    return es,labs
+ 
 def loadsynth(nsamp=320):
     es = []
     with open("ds6.txt","r") as f:
@@ -81,12 +101,13 @@ def distances():
         d += dist(est[i],esc[i])
     print("Dboth",d/100.)
 
-tre,trl = loadsynth()
+# tre,trl = loadsynth()
+tre,trl = loadtrain()
 tee,tel = loadval()
 
 # - vectors: list of lists or numpy array, shape (n_samples, embedding_dim)
 # - labels: list of 0s and 1s (or any two class labels)
-cl=5
+cl=0
 vectors = np.array([tre[i] for i in range(len(tre)) if trl[i]==cl] + [tee[i] for i in range(len(tee)) if tel[i]==cl])
 labels = np.array([0 for i in range(len(tre)) if trl[i]==cl] + [1 for i in range(len(tee)) if tel[i]==cl])
 
