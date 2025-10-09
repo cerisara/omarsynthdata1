@@ -17,6 +17,7 @@ def loadval():
                     e[j] += vs[i][j]
             for j in range(len(e)): e[j] /= float(len(vs))
             es.append(e)
+    print("evaldata",' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
     return es,labs
 
 def loadtrain(nsamp=320):
@@ -42,6 +43,7 @@ def loadtrain(nsamp=320):
         for i,l in enumerate(f):
             if i>=len(es): break
             labs.append(int(l[0]))
+    print("traindata",' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
     return es,labs
 
 def sample(es,labs):
@@ -50,7 +52,7 @@ def sample(es,labs):
 
 
 tre,trl = loadtrain()
-tee,tel = loadtrain()
+tee,tel = loadval()
 for i in range(100):
     e,l = sample(tre,trl)
     print("T",l)
