@@ -50,12 +50,32 @@ def sample(es,labs):
     i = random.randint(0,len(es)-1)
     return es[i],labs[i]
 
+def dist(a,b):
+    d=sum([a[i]*b[i] for i in range(len(a))])
+    return d
 
 tre,trl = loadtrain()
-tee,tel = loadval()
+d=0.
+est = []
 for i in range(100):
     e,l = sample(tre,trl)
-    print("T",l)
+    est.append(e)
+    be,bl = sample(tre,trl)
+    d += dist(e,be)
+print("Dsynth",d/100.)
+
+tee,tel = loadval()
+d=0.
+esc=[]
 for i in range(100):
     e,l = sample(tee,tel)
-    print("E",l)
+    esc.append(e)
+    be,bl = sample(tre,trl)
+    d += dist(e,be)
+print("Dcorp",d/100.)
+
+d=0.
+for i in range(len(est)):
+    d += dist(est[i],esc[i])
+print("Dboth",d/100.)
+
