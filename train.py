@@ -2,7 +2,36 @@
 import torch
 import torch.nn as nn
 import random
- 
+from collections import defaultdict
+
+class Metric:
+    def __init__(self):
+        # Track true positives, false positives, false negatives per class
+        self.tp = defaultdict(int)
+        self.fp = defaultdict(int)
+        self.fn = defaultdict(int)
+        self.labels = set()
+
+    def update(self, ypred: int, ugold: int):
+        self.labels.update([ypred, ugold])  # Track all observed labels
+        if ypred == ugold:
+            self.tp[ypred] += 1
+        else:
+            self.fp[ypred] += 1
+            self.fn[ugold] += 1
+
+    def getF1(self):
+        f1_scores = {}
+        for label in sorted(self.labels):
+            tp = self.tp[label]
+            fp = self.fp[label]
+            fn = self.fn[label]
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+            f1_scores[label] = f1
+        return f1_scores
+
 def loadtrain():
     with open("aclarctrain.lab","r") as f: labs=[int(s) for s in f]
     es=[]
@@ -21,7 +50,7 @@ def loadtrain():
             for j in range(len(e)): e[j] /= float(len(vs))
             # es.append(e)
             es.append(torch.tensor(e))
-    print("traindata",' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
+    print("traindata",len(es),' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
     return es,labs
  
 def loadval():
@@ -81,7 +110,7 @@ tridx = [i for i in range(len(es))]
 
 nsamp = len(es)
 dim = es[0].shape[0]
-nclass = 1+max(labs])
+nclass = 1+max(labs)
 print("data",nsamp,dim,nclass)
 
 mlp = nn.Sequential(
@@ -90,13 +119,12 @@ mlp = nn.Sequential(
     nn.Linear(256, nclass)
 )
 
-labs = [torch.LongTensor([x]) for x in range(nclass)]
 lossf = nn.CrossEntropyLoss()
 opt = torch.optim.Adam(mlp.parameters(),lr=0.00002)
 for ep in range(100):
     random.shuffle(tridx)
     for xi in range(len(tridx)):
-        lab = torch.LongTensor(labs[tridx[xi]])
+        lab = torch.LongTensor([labs[tridx[xi]]])
         x   = es[tridx[xi]]
         opt.zero_grad()
         y=mlp(x)
@@ -105,44 +133,14 @@ for ep in range(100):
         loss.backward()
         opt.step()
 
-    if False:
-        # only use that to test on part of synth data
-        with torch.no_grad():
-            nok,ntot=0,0
-            nokc = [0]*nclass
-            ntotc = [0]*nclass
-            for lab,x in testset:
-                y=mlp(x)
-                cpred = torch.argmax(y)
-                if cpred.item()==lab:
-                    nokc[lab]+=1
-                    nok+=1            
-                ntot += 1
-                ntotc[lab]+=1
-                print("REC",ep,cpred.item(),lab)
-            acc = float(nok)/float(ntot)
-            print("ACC",acc,ntot)
-            for ci in range(nclass):
-                acc = float(nokc[ci])/float(ntotc[ci])
-                print("ACL"+str(ci),acc,ntotc[ci])
- 
     with torch.no_grad():
-        nok,ntot=0,0
-        nokc = [0]*nclass
-        ntotc = [0]*nclass
+        metric = Metric()
         for i in range(len(acles)):
             y=mlp(acles[i])
             cpred = torch.argmax(y)
             lab = acllabs[i]
-            if cpred.item()==lab:
-                nokc[lab]+=1
-                nok+=1
-            ntot += 1
-            ntotc[lab]+=1
+            metric.update(cpred.item(),lab)
             print("VALREC",cpred.item(),lab)
-        acc = float(nok)/float(ntot)
-        print("VALACC",acc,ntot)
-        for ci in range(nclass):
-            acc = float(nokc[ci])/float(ntotc[ci])
-            print("VALACL"+str(ci),acc,ntotc[ci])
-     
+        f1s = metric.getF1()
+        print(f1s)
+        
