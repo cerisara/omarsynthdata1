@@ -120,34 +120,41 @@ print("data",nsamp,dim,nclass)
 mlp = nn.Sequential(
     nn.Linear(dim, 256),
     nn.ReLU(),              # or nn.GELU() for Transformer-style
-    nn.Linear(256, nclass)
+    nn.Linear(256, 2)
 ).to(dev)
 
-lossf = nn.CrossEntropyLoss()
-opt = torch.optim.Adam(mlp.parameters(),lr=0.001)
-for ep in range(100):
-    random.shuffle(tridx)
-    # simulate a single batch with all data in
-    opt.zero_grad()
-    for xi in range(len(tridx)):
-        lab = torch.LongTensor([labs[tridx[xi]]]).to(dev)
-        x   = es[tridx[xi]]
-        y=mlp(x)
-        loss = lossf(y.view(1,-1),lab.view(1,))
-        print("LOSS",loss.item(),ep,xi)
-        loss.backward()
-    opt.step()
+def sft(mlp, cl):
+    # 1 class vs. all
+    labOK = torch.LongTensor([0]).to(dev)
+    labKO = torch.LongTensor([1]).to(dev)
+    lossf = nn.CrossEntropyLoss()
+    opt = torch.optim.Adam(mlp.parameters(),lr=0.001)
+    for ep in range(100):
+        random.shuffle(tridx)
+        # simulate a single batch with all data in
+        opt.zero_grad()
+        for xi in range(len(tridx)):
+            if labs[tridx[xi]]==cl: lab=labOK
+            else: lab=labKO
+            x   = es[tridx[xi]]
+            y=mlp(x)
+            loss = lossf(y.view(1,-1),lab.view(1,))
+            print("LOSS",loss.item(),ep,xi)
+            loss.backward()
+        opt.step()
 
-    with torch.no_grad():
-        metric = Metric()
-        for i in range(len(acles)):
-            y=mlp(acles[i])
-            cpred = torch.argmax(y)
-            lab = acllabs[i]
-            metric.update(cpred.item(),lab)
-            print("VALREC",cpred.item(),lab)
-        f1s = metric.getF1()
-        print("clF1s",f1s)
-        macrof1 = sum(f1s.values())/len(f1s)
-        print("macroF1",macrof1)
-        
+        with torch.no_grad():
+            metric = Metric()
+            for i in range(len(acles)):
+                y=mlp(acles[i])
+                cpred = torch.argmax(y)
+                lab = acllabs[i]
+                metric.update(cpred.item(),lab)
+                print("VALREC",cpred.item(),lab)
+            f1s = metric.getF1()
+            print("clF1s",f1s)
+            macrof1 = sum(f1s.values())/len(f1s)
+            print("macroF1",macrof1)
+
+sft(mlp,4)
+
