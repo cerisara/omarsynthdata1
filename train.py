@@ -3,6 +3,9 @@ import torch
 import torch.nn as nn
 import random
 from collections import defaultdict
+import arxiv
+
+dev = "cuda"
 
 class Metric:
     def __init__(self):
@@ -49,7 +52,7 @@ def loadtrain():
                     e[j] += vs[i][j]
             for j in range(len(e)): e[j] /= float(len(vs))
             # es.append(e)
-            es.append(torch.tensor(e))
+            es.append(torch.tensor(e).to(dev))
     print("traindata",len(es),' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
     return es,labs
  
@@ -69,7 +72,7 @@ def loadval():
                 for j in range(len(e)):
                     e[j] += vs[i][j]
             for j in range(len(e)): e[j] /= float(len(vs))
-            es.append(torch.tensor(e))
+            es.append(torch.tensor(e).to(dev))
     return es,labs
  
 def loadsynth():
@@ -87,7 +90,7 @@ def loadsynth():
                 for j in range(len(e)):
                     e[j] += vs[i][j]
             for j in range(len(e)): e[j] /= float(len(vs))
-            es.append(torch.tensor(e))
+            es.append(torch.tensor(e).to(dev))
             if len(es)>1200: break
 
     labs=[]
@@ -98,6 +101,7 @@ def loadsynth():
             labs.append(lab)
     return es,labs
 
+# unsuputts = arxiv.loadArxiv()
 acles,acllabs = loadval()
 # es,labs = loadsynth()
 es,labs = loadtrain()
@@ -117,21 +121,22 @@ mlp = nn.Sequential(
     nn.Linear(dim, 256),
     nn.ReLU(),              # or nn.GELU() for Transformer-style
     nn.Linear(256, nclass)
-)
+).to(dev)
 
 lossf = nn.CrossEntropyLoss()
-opt = torch.optim.Adam(mlp.parameters(),lr=0.00002)
+opt = torch.optim.Adam(mlp.parameters(),lr=0.001)
 for ep in range(100):
     random.shuffle(tridx)
+    # simulate a single batch with all data in
+    opt.zero_grad()
     for xi in range(len(tridx)):
-        lab = torch.LongTensor([labs[tridx[xi]]])
+        lab = torch.LongTensor([labs[tridx[xi]]]).to(dev)
         x   = es[tridx[xi]]
-        opt.zero_grad()
         y=mlp(x)
         loss = lossf(y.view(1,-1),lab.view(1,))
         print("LOSS",loss.item(),ep,xi)
         loss.backward()
-        opt.step()
+    opt.step()
 
     with torch.no_grad():
         metric = Metric()
@@ -142,5 +147,7 @@ for ep in range(100):
             metric.update(cpred.item(),lab)
             print("VALREC",cpred.item(),lab)
         f1s = metric.getF1()
-        print(f1s)
+        print("clF1s",f1s)
+        macrof1 = sum(f1s.values())/len(f1s)
+        print("macroF1",macrof1)
         
