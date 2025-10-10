@@ -129,7 +129,15 @@ def sft(mlp, cl):
     labKO = torch.LongTensor([1]).to(dev)
     lossf = nn.CrossEntropyLoss()
     opt = torch.optim.Adam(mlp.parameters(),lr=0.001)
-    for ep in range(100):
+    for ep in range(200):
+        # reequilibre 50%
+        okidx = []
+        koidx = []
+        for xi in range(len(es)):
+            if labs[xi]==cl: okidx.append(xi)
+            else: koidx.append(xi)
+        random.shuffle(koidx)
+        tridx = okidx+koidx[:len(okidx)]
         random.shuffle(tridx)
         # simulate a single batch with all data in
         opt.zero_grad()
@@ -145,12 +153,17 @@ def sft(mlp, cl):
 
         with torch.no_grad():
             metric = Metric()
+            cnn=[0,0]
             for i in range(len(acles)):
                 y=mlp(acles[i])
                 cpred = torch.argmax(y)
                 lab = acllabs[i]
+                if lab==cl: lab=0
+                else: lab=1
+                cnn[cpred.item()]+=1
                 metric.update(cpred.item(),lab)
                 print("VALREC",cpred.item(),lab)
+            print("NN",cnn[0],cnn[1])
             f1s = metric.getF1()
             print("clF1s",f1s)
             macrof1 = sum(f1s.values())/len(f1s)

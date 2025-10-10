@@ -1,5 +1,16 @@
 
 -----------
+Fri Oct 10 21:51:51 CEST 2025
+
+je teste une baseline en 1 vs all pour preparer le unsuprisk.
+
+avec cl=4, un classifieur binaire trained sur un corpus balanced 50% donne F1=25% sur ACLARC
+avec cl=0, on est a F1=80%
+
+ceci correspond a peu pres a ce qu'on avait avec un N-class classifier; c'est normal.
+TODO: ajouter le corpus unsup
+
+-----------
 Thu Oct  9 11:53:24 AM CEST 2025
 
 Methode: synth data -> embedding -> MLP -> classif en 6 citation types
