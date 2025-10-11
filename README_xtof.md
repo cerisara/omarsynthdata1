@@ -1,5 +1,15 @@
 
 -----------
+sam. 11 oct. 2025 07:17:47 CEST
+
+dans tSNE, les points synth vs. ACLARC sont peut-etre separes parce que le LLM
+genere des topics tres differents, alors que ACLARC est focus sur un seul topic.
+Donc cela serait l'inverse de ce que je croyais (i.e. LLM n'est pas assez variable);
+si c'est le cas, alors TODO: augmenter le ACLARC train dataset en demandant au LLM de
+preserver la forme de la phrase, la syntaxe, mais de changer le domaine scientifique,
+afin de train le MLP pour qu'il apprenne que la classif doit etre indep du topic.
+
+-----------
 Fri Oct 10 21:51:51 CEST 2025
 
 je teste une baseline en 1 vs all pour preparer le unsuprisk.
