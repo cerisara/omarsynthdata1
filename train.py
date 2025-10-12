@@ -3,6 +3,7 @@ import torch.nn as nn
 import random
 from collections import defaultdict
 import unsuprisk
+import sys
 
 dev = "cuda"
 
@@ -160,7 +161,7 @@ mlp = nn.Sequential(
     nn.Linear(256, 2)
 ).to(dev)
 
-def sft(mlp, cl):
+def sft(mlp, cl, wp0=0.):
     # 1 class vs. all
     labOK = torch.LongTensor([0]).to(dev)
     labKO = torch.LongTensor([1]).to(dev)
@@ -227,8 +228,6 @@ def sft(mlp, cl):
         sc0 = torch.nn.functional.softmax(y, dim=-1)[:,out0idx]
         risk = unsuprisk.UnsupRisk(prior0)
         uloss = risk(sc0)
-        # TODO: weight up the unsuprisk loss !!
-        wp0 = 100.0
         uloss = uloss * wp0
         print("UNSUPLOSS",uloss.item(),wp0,out0idx)
         uloss.backward()
@@ -284,16 +283,23 @@ def sft(mlp, cl):
     print("TESTF1",teallf1s[bestep][0], teallf1s[-1][0], bestep)
     return allf1s, teallf1s[bestep][0]
 
-smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
-for run in range(10):
-    allf1s, teallf1 = sft(mlp,4)
-    smeanf1 += sum([allf1s[-i][0] for i in range(50)])/50.
-    smaxf1  += max([x[0] for x in allf1s])
-    slastf1 += allf1s[-1][0]
-    tef1 += teallf1
-tef1 /= 10.
-smeanf1 /= 10.
-smaxf1 /= 10.
-slastf1 /= 10.
-print("ALLRUNSF1",tef1,smeanf1,smaxf1,slastf1)
+if __name__ == "__main__":
+    if len(sys.argv)>1: w0 = float(sys.argv[1])
+    else: w0 = 0.
+
+    # attention: il y a du code qui a deja run ci-dessus !
+
+    smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
+    nruns = 100
+    for run in range(nruns):
+        allf1s, teallf1 = sft(mlp,4, w0)
+        smeanf1 += sum([allf1s[-i][0] for i in range(50)])/50.
+        smaxf1  += max([x[0] for x in allf1s])
+        slastf1 += allf1s[-1][0]
+        tef1 += teallf1
+    tef1 /= float(nruns)
+    smeanf1 /= float(nruns)
+    smaxf1 /= float(nruns)
+    slastf1 /= float(nruns)
+    print("ALLRUNSF1",tef1,smeanf1,smaxf1,slastf1)
 
