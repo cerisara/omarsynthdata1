@@ -92,6 +92,25 @@ def loadval():
             es.append(torch.tensor(e).to(dev))
     return es,labs
  
+def loadtest():
+    with open("aclarctest.lab","r") as f: labs=[int(s) for s in f]
+    es=[]
+    with open("aclarctest.txt","r") as f:
+        for li, l in enumerate(f):
+            s=l.replace('[','').strip().split(']')
+            vs=[]
+            for i in range(len(s)):
+                ss=s[i].strip().split(',')
+                v=[float(x) for x in ss if len(x)>0]
+                if len(v)>0: vs.append(v)
+            e = [0.]*len(vs[0])
+            for i in range(len(vs)):
+                for j in range(len(e)):
+                    e[j] += vs[i][j]
+            for j in range(len(e)): e[j] /= float(len(vs))
+            es.append(torch.tensor(e).to(dev))
+    return es,labs
+ 
 def loadsynth():
     es = []
     with open("ds6.txt","r") as f:
@@ -119,6 +138,7 @@ def loadsynth():
     return es,labs
 
 acles,acllabs = loadval()
+teacles,teacllabs = loadtest()
 # es,labs = loadsynth()
 es,labs = loadtrain()
 assert len(es)==len(labs)
@@ -155,6 +175,8 @@ def sft(mlp, cl):
     print("PRIOR0",prior0)
     assert prior0>0 and prior0<0.5 # assume tgt = classe minoritaire
 
+    allf1s = []
+    teallf1s = []
     for ep in range(400):
         random.shuffle(koidx)
         # nko = len(okidx) # gives balanced corpus
@@ -202,12 +224,13 @@ def sft(mlp, cl):
         if m0OK>m0KO: out0idx = 1
         else: out0idx = 0
         y=mlp(arx)
-        sc0 = torch.nn.functional.softmax(y, dim=-1)
+        sc0 = torch.nn.functional.softmax(y, dim=-1)[:,out0idx]
         risk = unsuprisk.UnsupRisk(prior0)
         uloss = risk(sc0)
         # TODO: weight up the unsuprisk loss !!
-        uloss = uloss * 1.0
-        print("UNSUPLOSS",uloss.item())
+        wp0 = 100.0
+        uloss = uloss * wp0
+        print("UNSUPLOSS",uloss.item(),wp0,out0idx)
         uloss.backward()
 
         opt.step()
@@ -228,8 +251,49 @@ def sft(mlp, cl):
             print("NN",cnn[0],cnn[1])
             f1s = metric.getF1()
             print("clF1s",f1s)
-            macrof1 = sum(f1s.values())/len(f1s)
-            print("macroF1",macrof1)
+            # macrof1 = sum(f1s.values())/len(f1s)
+            # print("macroF1",macrof1)
+            allf1s.append(f1s)
+ 
+        # test
+        with torch.no_grad():
+            metric = Metric()
+            cnn=[0,0]
+            for i in range(len(teacles)):
+                y=mlp(teacles[i])
+                cpred = torch.argmax(y)
+                lab = teacllabs[i]
+                if lab==cl: lab=0
+                else: lab=1
+                cnn[cpred.item()]+=1
+                metric.update(cpred.item(),lab)
+                print("TESTREC",cpred.item(),lab)
+            print("TENN",cnn[0],cnn[1])
+            f1s = metric.getF1()
+            print("TEclF1s",f1s)
+            teallf1s.append(f1s)
+ 
+    # early stopping
+    maxf1  = max([x[0] for x in allf1s])
+    meanf1 = sum([allf1s[-i][0] for i in range(50)])/50.
+    for ep in range(len(allf1s)):
+        if allf1s[ep][0]==maxf1:
+            bestep = ep
+            break
+    print("FINALF1",allf1s[bestep][0], allf1s[-1][0], meanf1, maxf1)
+    print("TESTF1",teallf1s[bestep][0], teallf1s[-1][0], bestep)
+    return allf1s, teallf1s[bestep][0]
 
-sft(mlp,4)
+smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
+for run in range(10):
+    allf1s, teallf1 = sft(mlp,4)
+    smeanf1 += sum([allf1s[-i][0] for i in range(50)])/50.
+    smaxf1  += max([x[0] for x in allf1s])
+    slastf1 += allf1s[-1][0]
+    tef1 += teallf1
+tef1 /= 10.
+smeanf1 /= 10.
+smaxf1 /= 10.
+slastf1 /= 10.
+print("ALLRUNSF1",tef1,smeanf1,smaxf1,slastf1)
 
