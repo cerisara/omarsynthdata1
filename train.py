@@ -70,7 +70,7 @@ def loadtrain():
             for j in range(len(e)): e[j] /= float(len(vs))
             # es.append(e)
             es.append(torch.tensor(e).to(dev))
-    print("traindata",len(es),' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs))]))
+    print("traindata",len(es),' '.join([str(sum([1 for l in labs if l==x])) for x in range(max(labs)+1)]))
     return es,labs
  
 def loadval():
