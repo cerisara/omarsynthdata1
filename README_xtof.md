@@ -22,6 +22,19 @@ je teste en ajoutant du bruit aux embeddings
 (stddev=0.1 only to NOK): F1(4) = 63%
 conclusion: regularizing by adding noise to rare classes helps generalize a bit
 
+J'ajoute ma loss unsup:
+
+F1(4) = 61% ca doit etre un peu mieux en vrai, mais attention a la variabilite et convergence
+ATTENTION: sur seulement la classe 4, la macro-F1 ne vaut rien, il faut regarder F1 de la classe 0 !!!
+avec unsuprisk:
+w=0
+
+w=1
+clF1s {0: 0.22222222222222224, 1: 0.9680365296803652}
+w=6
+clF1s {0: 0.25, 1: 0.9727272727272728}
+
+
 
 -----------
 sam. 11 oct. 2025 07:17:47 CEST
