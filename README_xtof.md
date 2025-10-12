@@ -1,5 +1,29 @@
 
 -----------
+Sun Oct 12 07:26:49 CEST 2025
+
+J'ai 2 idees en cours:
+- ajouter arxiv corpus via unsuprisk
+- augmenter ACLARC-train en demande au LLM de garder les memes phrases mais de changer le topic
+  pour que le MLP apprenne que la classif doit etre indep du topic
+
+mais je teste en cours simplement un classif binaire sur classe 4, train sur ACLARC-train:
+macroF1(class 0) = 79%
+macroF1(class 4) avec 50% de NOK = 58% (on a le moins de data ici, il faudrait early stop)
+macroF1(class 4) avec 75% de NKO = 59%
+macroF1(class 4) avec tous les NOK = 49%
+macroF1(class 4) avec NKO=3NOK = 59%
+macroF1(class 4) avec NKO=4NOK = 59%
+note: pour la classe 0, la loss ne converge pas ! est-ce donc qu'il faut regulariser ?!
+je teste en ajoutant du bruit aux embeddings 
+(stddev=0.01): F1(4) = 58%
+(stddev=0.1): F1(4) = 57%
+(stddev=0.001): F1(4) = 59.5%
+(stddev=0.1 only to NOK): F1(4) = 63%
+conclusion: regularizing by adding noise to rare classes helps generalize a bit
+
+
+-----------
 sam. 11 oct. 2025 07:17:47 CEST
 
 dans tSNE, les points synth vs. ACLARC sont peut-etre separes parce que le LLM
