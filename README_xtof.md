@@ -44,7 +44,11 @@ w=100
 clF1s {0: 0.33333333333333337, 1: 0.9819819819819819}
 clF1s {0: 0.22222222222222224, 1: 0.9680365296803652}
 
-je rerun 10x
+je rerun 10x: ci-dessous, moyenné sur 10 runs, le avg sur 50 dernieres epoch, max sur toutes epochs, last F1:
+w=100
+ALLRUNSF1 0.266803219003219 0.3285714285714286 0.2551587301587302
+w=0
+
 
 
 -----------
