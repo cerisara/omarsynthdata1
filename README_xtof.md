@@ -28,12 +28,23 @@ F1(4) = 61% ca doit etre un peu mieux en vrai, mais attention a la variabilite e
 ATTENTION: sur seulement la classe 4, la macro-F1 ne vaut rien, il faut regarder F1 de la classe 0 !!!
 avec unsuprisk:
 w=0
-
+clF1s {0: 0.28571428571428575, 1: 0.9773755656108598}
 w=1
 clF1s {0: 0.22222222222222224, 1: 0.9680365296803652}
 w=6
 clF1s {0: 0.25, 1: 0.9727272727272728}
+w=10
+clF1s {0: 0.25, 1: 0.9727272727272728}
 
+bugfix: je gardais les 2x MLP outputs
+
+w=10
+clF1s {0: 0.25, 1: 0.9727272727272728}
+w=100
+clF1s {0: 0.33333333333333337, 1: 0.9819819819819819}
+clF1s {0: 0.22222222222222224, 1: 0.9680365296803652}
+
+je rerun 10x
 
 
 -----------
