@@ -24,6 +24,10 @@ ALLRUNSF1 0.1811569507105002 0.23056675309955388 0.32935716442140545 0.225838855
 
 Je relance, et j'observe toujours une variabilité importante: pourquoi, alors que je run 100 XPs supposément indep ?
 est-ce que +/-3% est norma sur 100 runs ?
+==> il n'y a pas de patterns temporels evidents, juste une grand var de chaque run, surement due
+au faible nb de classe 4 dans le corpus de test, et au early-stopping: je pourrais peut-etre diminuer la variabilite
+sur ce dernier point en detectant les mauvaises convergence du train, ou en moyennant les MLP sur plusieurs epoch
+(Stochastic weight averaging), ou en empechant de stop trop tot.
 
 ALLRUNSF1 0.3016899113957935 0.23125508772273487 0.3301796536796533 0.2390295815295813
 xtof@adae:~/git/omar_synthdata$ tail -1 trunsup10..log 
