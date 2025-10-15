@@ -65,13 +65,13 @@ dim = corpus[0][1][0].shape[0]
 nclass = 1+max(corpus[0][0])
 print("data",nsamp,dim,nclass)
 
-mlp = nn.Sequential(
-    nn.Linear(dim, 500),
-    nn.ReLU(),              # or nn.GELU() for Transformer-style
-    nn.Linear(500, 6)
-).to(dev)
-
-def sft(mlp):
+def sft():
+    mlp = nn.Sequential(
+        nn.Linear(dim, 500),
+        nn.ReLU(),              # or nn.GELU() for Transformer-style
+        nn.Linear(500, 6)
+    ).to(dev)
+ 
     vlabs = [torch.LongTensor([i]).to(dev) for i in range(6)]
     lossf = nn.CrossEntropyLoss()
     opt = torch.optim.Adam(mlp.parameters(),lr=0.001)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
     nruns = 100
     for run in range(nruns):
-        _, teallf1 = sft(mlp)
+        _, teallf1 = sft()
         tef1 += teallf1
         ttef1 = tef1/float(run+1)
         print("ALLRUNSF1",ttef1,run)
