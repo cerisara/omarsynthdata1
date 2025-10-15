@@ -3,16 +3,25 @@ import torch.nn as nn
 import random 
 from collections import defaultdict
 import sys
+from transformers import AutoModel, AutoTokenizer
 
 dev = "cuda"
+model_name = "Qwen/Qwen3-14B"
+model_name = "Qwen/Qwen3-Embedding-0.6B"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModel.from_pretrained(model_name, output_hidden_states=True).to(dev)
+print(model.config)
 
-def embedall():
+def embedder(x,l):
+    with torch.no_grad():
+        inputs = tokenizer(x, return_tensors="pt").to(dev)
+        outputs = model(**inputs)
+        hidden_states = outputs.hidden_states  # tuple: (num_layers + 1, batch, seq_len, hidden_size)
+    return hidden_states[l]
+
+def embedall(layer):
     from datasets import load_dataset
     from transformers import pipeline
-
-    model_name = "Qwen/Qwen3-14B"
-    model_name = "Qwen/Qwen3-Embedding-0.6B"
-    embedder = pipeline("feature-extraction", model=model_name, trust_remote_code=True, device=dev, return_tensors=True)
 
     ds = load_dataset("hrithikpiyush/acl-arc")
     res = []
@@ -26,7 +35,7 @@ def embedall():
         embeds = []
         for i in range(len(val)):
             l=val['cleaned_cite_text'][i]
-            embeddings = embedder(l).to(dev).to(torch.float32)
+            embeddings = embedder(l,layer).to(dev).to(torch.float32)
             embeds.append(embeddings[0,-1,:])
         res.append((labs,embeds))
     return res
@@ -59,13 +68,12 @@ class Metric:
             f1_scores[label] = f1
         return f1_scores
 
-corpus = embedall()
-nsamp = len(corpus[0][0])
-dim = corpus[0][1][0].shape[0]
-nclass = 1+max(corpus[0][0])
-print("data",nsamp,dim,nclass)
-
-def sft():
+def sft(corpus):
+    nsamp = len(corpus[0][0])
+    dim = corpus[0][1][0].shape[0]
+    nclass = 1+max(corpus[0][0])
+    print("data",nsamp,dim,nclass)
+ 
     mlp = nn.Sequential(
         nn.Linear(dim, 500),
         nn.ReLU(),              # or nn.GELU() for Transformer-style
@@ -137,16 +145,15 @@ def sft():
     return allf1s, macrof
 
 if __name__ == "__main__":
-    if len(sys.argv)>1: w0 = float(sys.argv[1])
-    else: w0 = 0.
+    for layer in (5,12,18,24,27):
+        print("LAYER",layer)
+        corpus = embedall(layer)
 
-    # attention: il y a du code qui a deja run ci-dessus !
-
-    smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
-    nruns = 100
-    for run in range(nruns):
-        _, teallf1 = sft()
-        tef1 += teallf1
-        ttef1 = tef1/float(run+1)
-        print("ALLRUNSF1",ttef1,run)
- 
+        nruns = 100
+        tef1 = 0.
+        for run in range(nruns):
+            _, teallf1 = sft(corpus)
+            tef1 += teallf1
+            ttef1 = tef1/float(run+1)
+            print("ALLRUNSF1",ttef1,run,layer)
+     
