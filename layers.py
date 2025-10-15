@@ -147,6 +147,6 @@ if __name__ == "__main__":
     for run in range(nruns):
         _, teallf1 = sft(mlp)
         tef1 += teallf1
-        tef1 /= float(run+1)
-        print("ALLRUNSF1",tef1,run)
+        ttef1 = tef1/float(run+1)
+        print("ALLRUNSF1",ttef1,run)
  
