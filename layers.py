@@ -79,7 +79,7 @@ def sft(mlp):
 
     allf1s = []
     teallf1s = []
-    for ep in range(400):
+    for ep in range(100):
         random.shuffle(tridx)
 
         lo = 0.
@@ -94,7 +94,7 @@ def sft(mlp):
             loss.backward()
             opt.step()
         lo /= float(len(tridx))
-        print("SFTLOSS",lo)
+        print("SFTLOSS",lo,ep)
 
         # evaluation
         with torch.no_grad():
@@ -132,8 +132,9 @@ def sft(mlp):
             bestep = ep
             break
     print("FINALF1",allf1s[bestep][0], allf1s[-1][0], meanf1, maxf1)
-    print("TESTF1",teallf1s[bestep][0], teallf1s[-1][0], bestep)
-    return allf1s, teallf1s[bestep][0]
+    macrof = sum(teallf1s[bestep].values())/float(len(teallf1s[bestep]))
+    print("TESTF1",macrof, teallf1s[bestep], bestep)
+    return allf1s, macrof
 
 if __name__ == "__main__":
     if len(sys.argv)>1: w0 = float(sys.argv[1])
@@ -144,14 +145,8 @@ if __name__ == "__main__":
     smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
     nruns = 100
     for run in range(nruns):
-        allf1s, teallf1 = sft(mlp)
-        smeanf1 += sum([allf1s[-i][0] for i in range(50)])/50.
-        smaxf1  += max([x[0] for x in allf1s])
-        slastf1 += allf1s[-1][0]
+        _, teallf1 = sft(mlp)
         tef1 += teallf1
-    tef1 /= float(nruns)
-    smeanf1 /= float(nruns)
-    smaxf1 /= float(nruns)
-    slastf1 /= float(nruns)
-    print("ALLRUNSF1",tef1,smeanf1,smaxf1,slastf1)
+        tef1 /= float(run+1)
+        print("ALLRUNSF1",tef1,run)
  
