@@ -6,6 +6,7 @@ import unsuprisk
 import sys
 
 dev = "cuda"
+dounsup = False
 
 class Metric:
     def __init__(self):
@@ -144,7 +145,7 @@ teacles,teacllabs = loadtest()
 es,labs = loadtrain()
 assert len(es)==len(labs)
 tridx = [i for i in range(len(es))]
-arxes = loadarxiv()
+if dounsup: arxes = loadarxiv()
 
 # on garde toujours la meme partie du synth data comme test set
 # testset = es[:200]
@@ -214,23 +215,23 @@ def sft(mlp, cl, wp0=0.):
         lo /= float(len(tridx))
         print("SFTLOSS",lo)
 
-        # partie unsuprisk
-        random.shuffle(arxes)
-        arx = torch.stack(arxes[:1024]) # pick random batch of 1024 samples
-        # fix le prior: dans unsuprisk, la classe 0 est la minoritaire
-        # j'ai calcule la moyenne m(0,OK) des output 0 du MLP pour la classe 0 et pour la classe 1 m(0,KO)
-        # si m(0,OK)>m(0,KO), alors il faut inverser les outputs du MLP
-        m0OK /= float(nOK)
-        m0KO /= float(nKO)
-        if m0OK>m0KO: out0idx = 1
-        else: out0idx = 0
-        y=mlp(arx)
-        sc0 = torch.nn.functional.softmax(y, dim=-1)[:,out0idx]
-        risk = unsuprisk.UnsupRisk(prior0)
-        uloss = risk(sc0)
-        uloss = uloss * wp0
-        print("UNSUPLOSS",uloss.item(),wp0,out0idx)
-        uloss.backward()
+        if dounsup:
+            random.shuffle(arxes)
+            arx = torch.stack(arxes[:1024]) # pick random batch of 1024 samples
+            # fix le prior: dans unsuprisk, la classe 0 est la minoritaire
+            # j'ai calcule la moyenne m(0,OK) des output 0 du MLP pour la classe 0 et pour la classe 1 m(0,KO)
+            # si m(0,OK)>m(0,KO), alors il faut inverser les outputs du MLP
+            m0OK /= float(nOK)
+            m0KO /= float(nKO)
+            if m0OK>m0KO: out0idx = 1
+            else: out0idx = 0
+            y=mlp(arx)
+            sc0 = torch.nn.functional.softmax(y, dim=-1)[:,out0idx]
+            risk = unsuprisk.UnsupRisk(prior0)
+            uloss = risk(sc0)
+            uloss = uloss * wp0
+            print("UNSUPLOSS",uloss.item(),wp0,out0idx)
+            uloss.backward()
 
         opt.step()
 
