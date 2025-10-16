@@ -4,6 +4,7 @@ import random
 from collections import defaultdict
 import sys
 from transformers import AutoModel, AutoTokenizer
+from transformers import pipeline
 
 dev = "cuda"
 model_name = "Qwen/Qwen3-14B"
@@ -11,6 +12,7 @@ model_name = "Qwen/Qwen3-Embedding-0.6B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModel.from_pretrained(model_name, output_hidden_states=True).to(dev)
 print(model.config)
+# pipel = pipeline("feature-extraction", model=model_name, trust_remote_code=True, device=dev, return_tensors=True)
 
 def embedder(x,l):
     with torch.no_grad():
@@ -36,7 +38,8 @@ def embedall(layer):
         for i in range(len(val)):
             l=val['cleaned_cite_text'][i]
             embeddings = embedder(l,layer).to(dev).to(torch.float32)
-            embeds.append(embeddings[0,-1,:])
+            normalized = torch.nn.functional.normalize(embeddings[0,-1,:], p=2, dim=0)
+            embeds.append(normalized)
         res.append((labs,embeds))
     return res
  
@@ -145,7 +148,9 @@ def sft(corpus):
     return allf1s, macrof
 
 if __name__ == "__main__":
-    for layer in (5,12,18,24,27):
+    # for layer in (5,12,18,24,28):
+    # 28 ca marche bien mais 27 ca donne bad res !
+    for layer in (28,14,5,18,10):
         print("LAYER",layer)
         corpus = embedall(layer)
 
