@@ -209,6 +209,7 @@ if __name__ == "__main__":
 
     # attention: il y a du code qui a deja run ci-dessus !
 
+    smeanf1, smaxf1, slastf1, tef1 = 0.,0.,0.,0.
     nruns = 10
     for run in range(nruns):
         allf1s, teallf1 = sft(5, w0)
