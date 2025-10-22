@@ -241,7 +241,7 @@ def sft(cl, wp0=1.):
 
 if __name__ == "__main__":
     if len(sys.argv)>1: w0 = float(sys.argv[1])
-    else: w0 = 0.
+    else: w0 = 1.
 
     # attention: il y a du code qui a deja run ci-dessus !
 
