@@ -95,14 +95,13 @@ def sft(cl, wp0=1.):
         random.shuffle(koidx)
         tridx = okidx+koidx[:nko]
         random.shuffle(tridx)
-        # simulate a single batch with all data in
-        opt.zero_grad()
 
         # partie SFT de la loss
         lo = 0.
         m0OK, m0KO = 0., 0.
         nOK, nKO = 0, 0
         for xi in range(len(tridx)):
+            opt.zero_grad()
             if ds['train'][tridx[xi]]['intent']==cl: lab=labOK
             else: lab=labKO
             s = ds['train']['cleaned_cite_text'][tridx[xi]]
@@ -115,7 +114,7 @@ def sft(cl, wp0=1.):
             y=model(**x)
             yy = y.logits[0,-1,[tokyes,tokno]]
             sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
-            print("SCORESUP",sc0,lab.item())
+            print("SCORESUP",sc0,lab.item(),ep,xi)
             if lab==0:
                 nOK += 1
                 m0OK += sc0
@@ -126,6 +125,7 @@ def sft(cl, wp0=1.):
             lo += loss.item()
             print("sampleLOSS",loss.item(),ep,xi,"batch",len(tridx))
             loss.backward()
+            opt.step()
         lo /= float(len(tridx))
         print("SFTLOSS",lo,ep)
  
@@ -142,7 +142,7 @@ def sft(cl, wp0=1.):
 
         if dounsup:
             random.shuffle(arxes)
-            ss = arxes[:128] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
+            ss = arxes[:1024] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
             allscores = []
             with torch.no_grad():
                 for s in ss:
@@ -153,13 +153,36 @@ def sft(cl, wp0=1.):
                     sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
                     print("SCOREUNSUP",sc0)
                     allscores.append(sc0)
-            exit()
-            risk = unsuprisk.UnsupRisk(prior0)
-            uloss = risk(allscores)
-            uloss = uloss * wp0
-            print("UNSUPLOSS",uloss.item(),ep)
-            uloss.backward()
-        opt.step()
+            x = torch.Tensor(allscores)
+            xmin, xmax = torch.min(x), torch.max(x)
+            xmax = xmax - xmin
+            xn = (x-xmin)/xmax
+            xx,_ = torch.sort(xn.view(-1))
+            n = prior0 * len(allscores)
+            n = int(n)
+            thr = x[n].item()
+            lo=0.
+            for s in ss:
+                opt.zero_grad()
+                utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
+                x = toker(utt, return_tensors="pt").to(dev)
+                y=model(**x)
+                yy = y.logits[:,-1,[tokyes,tokno]]
+                sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
+                sc0 = sc0 - xmin
+                sc0 = sc0 / xmax
+                if sc0>thr: loss = -sc0 * wp0
+                else: loss = sc0 * wp0
+                lo += loss.item()
+                loss.backward()
+                opt.step()
+            lo /= float(len(ss))
+            print("UNSUPLOSS",lo,ep)
+            # risk = unsuprisk.UnsupRisk(prior0)
+            # uloss = risk(allscores)
+            # uloss = uloss * wp0
+            # uloss.backward()
+            # opt.step()
 
         # evaluation
         with torch.no_grad():
