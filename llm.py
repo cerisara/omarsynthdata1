@@ -115,6 +115,7 @@ def sft(cl, wp0=1.):
             y=model(**x)
             yy = y.logits[0,-1,[tokyes,tokno]]
             sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
+            print("SCORESUP",sc0,lab.item())
             if lab==0:
                 nOK += 1
                 m0OK += sc0
@@ -143,13 +144,16 @@ def sft(cl, wp0=1.):
             random.shuffle(arxes)
             ss = arxes[:128] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
             allscores = []
-            for s in ss:
-                utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
-                x = toker(utt, return_tensors="pt").to(dev)
-                y=model(**x)
-                yy = y.logits[:,-1,[tokyes,tokno]]
-                sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
-                allscores.append(sc0)
+            with torch.no_grad():
+                for s in ss:
+                    utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
+                    x = toker(utt, return_tensors="pt").to(dev)
+                    y=model(**x)
+                    yy = y.logits[:,-1,[tokyes,tokno]]
+                    sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
+                    print("SCOREUNSUP",sc0)
+                    allscores.append(sc0)
+            exit()
             risk = unsuprisk.UnsupRisk(prior0)
             uloss = risk(allscores)
             uloss = uloss * wp0

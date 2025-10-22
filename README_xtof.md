@@ -10,6 +10,11 @@ average sur 9 runs:
 
 J'essaye de run avec le unsuprisk, mais ca plante OOM, meme avec
 seulement 128 batch (qui est le minimum possible, avec seulement 3 samples positifs en moyenne)
+==> TODO: version simplifiee en 2 passes: 1) calcul du threshold; 2) unsup train per sample et non plus per batch
+
+J'ai aussi plot les distribs des scores: les scores sup et unsup suivent la meme distrib,
+mais il n'y a aucune separation class 0/1; et les scores des lab=0 dans sup sont distribs partout;
+==> TODO: faire qqs epochs de SFT avant d'injecter le unsuprisk
 
 -----------
 Mon Oct 13 09:37:09 AM CEST 2025
