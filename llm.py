@@ -67,7 +67,7 @@ for i in co.keys():
 
 if dounsup: arxes = arxiv.loadArxiv()
 
-def sft(cl, wp0=0.):
+def sft(cl, wp0=1.):
     model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B").to(dev)
     toker = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     tokyes = toker(" Yes")['input_ids'][0]
@@ -127,36 +127,34 @@ def sft(cl, wp0=0.):
             loss.backward()
         lo /= float(len(tridx))
         print("SFTLOSS",lo,ep)
+ 
+        # fix le prior: dans unsuprisk, la classe 0 est la minoritaire
+        # j'ai calcule la moyenne m(0,OK) des output 0 du MLP pour la classe 0 et pour la classe 1 m(0,KO)
+        # si m(0,OK)>m(0,KO), alors il faut inverser les outputs du MLP
+        m0OK /= float(nOK)
+        m0KO /= float(nKO)
+        if False and m0OK>m0KO:
+            # non, car je sais que tokYES a l'idx 0 !!
+            out0idx = 1
+        else: out0idx = 0
+        print("OUT0",out0idx,wp0,m0OK,m0KO,nOK,nKO) 
 
         if dounsup:
             random.shuffle(arxes)
-            ss = arxes[:1024] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
-
-            # fix le prior: dans unsuprisk, la classe 0 est la minoritaire
-            # j'ai calcule la moyenne m(0,OK) des output 0 du MLP pour la classe 0 et pour la classe 1 m(0,KO)
-            # si m(0,OK)>m(0,KO), alors il faut inverser les outputs du MLP
-            m0OK /= float(nOK)
-            m0KO /= float(nKO)
-            if m0OK>m0KO: out0idx = 1
-            else: out0idx = 0
-            print("OUT0",out0idx,wp0)
-            lo = 0.
+            ss = arxes[:128] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
+            allscores = []
             for s in ss:
                 utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                 x = toker(utt, return_tensors="pt").to(dev)
                 y=model(**x)
                 yy = y.logits[:,-1,[tokyes,tokno]]
-     
                 sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
-                risk = unsuprisk.UnsupRisk(prior0)
-                uloss = risk(sc0)
-                uloss = uloss * wp0
-                lo += uloss.item()
-                print("oneULOSS",uloss.item())
-                uloss.backward()
-            lo /= float(len(ss))
-            print("UNSUPLOSS",lo,ep)
-
+                allscores.append(sc0)
+            risk = unsuprisk.UnsupRisk(prior0)
+            uloss = risk(allscores)
+            uloss = uloss * wp0
+            print("UNSUPLOSS",uloss.item(),ep)
+            uloss.backward()
         opt.step()
 
         # evaluation

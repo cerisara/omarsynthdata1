@@ -8,6 +8,8 @@ average sur 9 runs:
 - les perfs sur dev:  F1=85.7%
 - les perfs sur test: F1=32.4%
 
+J'essaye de run avec le unsuprisk, mais ca plante OOM, meme avec
+seulement 128 batch (qui est le minimum possible, avec seulement 3 samples positifs en moyenne)
 
 -----------
 Mon Oct 13 09:37:09 AM CEST 2025
