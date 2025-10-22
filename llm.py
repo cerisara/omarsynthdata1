@@ -11,7 +11,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 dev = "cuda"
-dounsup = False
+dounsup = True
 
 class Metric:
     def __init__(self):
@@ -145,7 +145,7 @@ def sft(cl, wp0=0.):
                 utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                 x = toker(utt, return_tensors="pt").to(dev)
                 y=model(**x)
-                yy = y.logits[0,-1,[tokyes,tokno]]
+                yy = y.logits[:,-1,[tokyes,tokno]]
      
                 sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
                 risk = unsuprisk.UnsupRisk(prior0)
