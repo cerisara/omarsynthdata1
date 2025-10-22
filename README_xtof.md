@@ -1,3 +1,13 @@
+22 oct 2025
+
+XP: train un Qwen3-0.6B en mode generation-clasif binaire:
+"is the @@CITATION in the previous sentence future, yes or no?"
+train en GD (batch=tout le train set) sur 400 epochs, early stopping
+
+average sur 9 runs:
+- les perfs sur dev:  F1=85.7%
+- les perfs sur test: F1=32.4%
+
 
 -----------
 Mon Oct 13 09:37:09 AM CEST 2025
