@@ -118,6 +118,7 @@ def sft(cl, wp0=1.):
             #     x=x+noise
             y=model(**x)
             yy = y.logits[0,-1,[tokyes,tokno]]
+            print("debugsup",yy)
             sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
             supscores.append((sc0,lab.item()))
             print("SCORESUP",sc0,lab.item(),ep,xi)
@@ -155,14 +156,21 @@ def sft(cl, wp0=1.):
                     utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                     x = toker(utt, return_tensors="pt").to(dev)
                     y=model(**x)
-                    yy = y.logits[:,-1,[tokyes,tokno]]
-                    sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
-                    print("SCOREUNSUP",sc0)
+                    yy = y.logits[0,-1,[tokyes,tokno]]
+                    print("debugunsup",yy)
+                    sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
+                    print("SCOREUNSUP",sc0,ep)
                     allscores.append(sc0)
             allscores.sort()
             xmin, xmax = allscores[0], allscores[-1]
             n = int(prior0 * len(allscores))
             thr = allscores[-n]
+            # pourquoi on a des probas(0) ramassees dans un minuscule intervalle, qui change de position a chaque epoch ?
+            # c'est comme si notre LLM output une proba independante de la phrase en input !
+            # alors que le score sur la partie labeled span tout l'intervalle 0-1
+            # ==> car sur la partie SUP, il train en meme temps: le LLM change ses poids, ce qui change l'output:
+            # la variabilite du SUP est due au chgt des poids, pas au changement des phrases !!
+            # donc le train modifie surtout le biais (= prior) du YES vs NO: TODO: ce n'est pas un bon training !!!
             print("NORMSCORES",xmin, xmax, thr,n,len(allscores))
             if True:
                 # check
@@ -182,8 +190,8 @@ def sft(cl, wp0=1.):
                 x = toker(utt, return_tensors="pt").to(dev)
                 print("ucontextlen",x['input_ids'].shape,len(utt))
                 y=model(**x)
-                yy = y.logits[:,-1,[tokyes,tokno]]
-                sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
+                yy = y.logits[0,-1,[tokyes,tokno]]
+                sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
                 if sc0>thr: loss = -sc0 * wp0
                 else: loss = sc0 * wp0
                 lo += loss.item()
@@ -255,7 +263,7 @@ def sft(cl, wp0=1.):
 
 if __name__ == "__main__":
     if len(sys.argv)>1: w0 = float(sys.argv[1])
-    else: w0 = 1.
+    else: w0 = 0.01
 
     # attention: il y a du code qui a deja run ci-dessus !
 
