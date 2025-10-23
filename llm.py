@@ -155,13 +155,11 @@ def sft(cl, wp0=1.):
                     sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
                     print("SCOREUNSUP",sc0)
                     allscores.append(sc0)
-            xmin, xmax = min(allscores), max(allscores)
-            xmax = xmax - xmin
-            xn = [(x-xmin)/xmax for x in allscores]
-            xn.sort()
-            n = int(prior0 * len(xn))
-            thr = xn[-n]
-            print("NORMSCORES",xmin, xmin+xmax,thr,n,len(allscores))
+            allscores.sort()
+            xmin, xmax = allscores[0], allscores[-1]
+            n = int(prior0 * len(allscores))
+            thr = allscores[-n]
+            print("NORMSCORES",xmin, xmax, thr,n,len(allscores))
             lo=0.
             for s in ss:
                 opt.zero_grad()
@@ -170,8 +168,6 @@ def sft(cl, wp0=1.):
                 y=model(**x)
                 yy = y.logits[:,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
-                sc0 = sc0 - xmin
-                sc0 = sc0 / xmax
                 if sc0>thr: loss = -sc0 * wp0
                 else: loss = sc0 * wp0
                 lo += loss.item()
