@@ -107,6 +107,7 @@ def sft(cl, wp0=1.):
             s = ds['train']['cleaned_cite_text'][tridx[xi]]
             utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
             x = toker(utt, return_tensors="pt").to(dev)
+            print("supcontextlen",x['input_ids'].shape,len(utt))
             # if lab==0:
             #     # la classe minoritaire a peu de samples, je la regularise ici avec du bruit gaussien
             #     noise = torch.randn_like(x) * 0.1
@@ -148,19 +149,19 @@ def sft(cl, wp0=1.):
                 for s in ss:
                     utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                     x = toker(utt, return_tensors="pt").to(dev)
+                    print("contextlen",x['input_ids'].shape,len(utt))
                     y=model(**x)
                     yy = y.logits[:,-1,[tokyes,tokno]]
                     sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
                     print("SCOREUNSUP",sc0)
                     allscores.append(sc0)
-            x = torch.Tensor(allscores)
-            xmin, xmax = torch.min(x), torch.max(x)
+            xmin, xmax = min(allscores), max(allscores)
             xmax = xmax - xmin
-            xn = (x-xmin)/xmax
-            xx,_ = torch.sort(xn.view(-1))
-            n = prior0 * len(allscores)
-            n = int(n)
-            thr = x[n].item()
+            xn = [(x-xmin)/xmax for x in allscores]
+            xn.sort()
+            n = int(prior0 * len(xn))
+            thr = xn[-n]
+            print("NORMSCORES",xmin, xmin+xmax,thr,n,len(allscores))
             lo=0.
             for s in ss:
                 opt.zero_grad()
@@ -174,6 +175,7 @@ def sft(cl, wp0=1.):
                 if sc0>thr: loss = -sc0 * wp0
                 else: loss = sc0 * wp0
                 lo += loss.item()
+                print("sampleunsuploss",loss.item(),torch.cuda.mem_get_info()[0])
                 loss.backward()
                 opt.step()
             lo /= float(len(ss))
