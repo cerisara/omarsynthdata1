@@ -65,7 +65,10 @@ for xi in range(len(ds['test'])):
 for i in co.keys():
     print(i,co[i])
 
-if dounsup: arxes = arxiv.loadArxiv()
+if dounsup:
+    arxs = arxiv.loadArxiv()
+    arxes = [s for s in arxs if len(s)<1500]
+    arxs = None
 
 def sft(cl, wp0=1.):
     model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B").to(dev)
@@ -100,6 +103,7 @@ def sft(cl, wp0=1.):
         lo = 0.
         m0OK, m0KO = 0., 0.
         nOK, nKO = 0, 0
+        supscores = []
         for xi in range(len(tridx)):
             opt.zero_grad()
             if ds['train'][tridx[xi]]['intent']==cl: lab=labOK
@@ -115,6 +119,7 @@ def sft(cl, wp0=1.):
             y=model(**x)
             yy = y.logits[0,-1,[tokyes,tokno]]
             sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
+            supscores.append((sc0,lab.item()))
             print("SCORESUP",sc0,lab.item(),ep,xi)
             if lab==0:
                 nOK += 1
@@ -149,7 +154,6 @@ def sft(cl, wp0=1.):
                 for s in ss:
                     utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                     x = toker(utt, return_tensors="pt").to(dev)
-                    print("contextlen",x['input_ids'].shape,len(utt))
                     y=model(**x)
                     yy = y.logits[:,-1,[tokyes,tokno]]
                     sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx].item()
@@ -160,11 +164,23 @@ def sft(cl, wp0=1.):
             n = int(prior0 * len(allscores))
             thr = allscores[-n]
             print("NORMSCORES",xmin, xmax, thr,n,len(allscores))
+            if True:
+                # check
+                cok,cko = [0,0],[0,0]
+                for s,lab in supscores:
+                    if lab==0:
+                        if s<thr: cok[0] += 1
+                        else: cok[1] += 1
+                    else:
+                        if s<thr: cko[0] += 1
+                        else: cko[1] += 1
+                print("THRSUP",cok[0],cok[1],cko[0],cko[1])
             lo=0.
             for s in ss:
                 opt.zero_grad()
                 utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                 x = toker(utt, return_tensors="pt").to(dev)
+                print("ucontextlen",x['input_ids'].shape,len(utt))
                 y=model(**x)
                 yy = y.logits[:,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1)[:,out0idx]
