@@ -1,3 +1,15 @@
+24 oct 2025
+
+- OK, je suis quasi sur qu'il n'y a plus de bugs dans le code unsup.
+- il converge vers une repartition des labeled future/no-future quasi parfaite par rapport au seuil du prior0
+- mais il ne generalise pas: le F1 sur le test reste < 30%: est-ce le arxiv dataset qui est trop different du TEST ?
+- note: les scores-unsup sont tres tres proches de 0 ou de 1, alors qu'ils ne l'etaient pas au debut
+
+TODO:
+- est-ce qu'on overfit sur ARXIV ? tester les hyper-parms ? comment mesurer l'overfitting sur ARXIV, avec un dev ?
+- tester avec le dataset de TEST a la place de ARXIV ?
+- ou mieux: des qu'on a un ex. de test, on recup 1024 ex. de ARXIV proches
+
 22 oct 2025
 
 XP: train un Qwen3-0.6B en mode generation-clasif binaire:
