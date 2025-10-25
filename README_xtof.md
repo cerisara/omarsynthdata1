@@ -6,14 +6,15 @@ sam. 25 oct. 2025 07:18:43 CEST
 - c'est vrai aussi du devF1, mais il est plus haut (80%) et il reste bcp plus longtemps au max
 - les supscores sont bien separes dans les 2 classes car ils sont revus a chaque epoch ==> overfitting sur supscores
 - est-ce que les unsupscores sont bien separes en 2 classes ? ==> OUI
-    TODO: lire les sentences unsup de la classe 0
 - quel est le posterior de la repartition ?
     ==> unsup class 0: 9%
-    ==> sup class 0: 25%
+    ==> sup class 0: 25% donc il y a bcp de samples negatifs mal classes !
 
 ==> tout ceci indique clairement un overfitting
 ==> une repartition qui classe bien les labeled samples dans les classes 0 et 1, mais par overfitting et ne respecte
     pas le prior !!
+
+TODO: imposer une nouvelle loss pour respecter le prior
 
 -----------
 24 oct 2025
