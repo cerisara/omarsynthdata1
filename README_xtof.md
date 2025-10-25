@@ -7,14 +7,19 @@ sam. 25 oct. 2025 07:18:43 CEST
 - les supscores sont bien separes dans les 2 classes car ils sont revus a chaque epoch ==> overfitting sur supscores
 - est-ce que les unsupscores sont bien separes en 2 classes ? ==> OUI
 - quel est le posterior de la repartition ?
-    ==> unsup class 0: 9%
-    ==> sup class 0: 25% donc il y a bcp de samples negatifs mal classes !
+    ==> unsup class 0: 9% ==> trop grand !
+    ==> sup class 0: 25% ce qui est parfait
 
 ==> tout ceci indique clairement un overfitting
 ==> une repartition qui classe bien les labeled samples dans les classes 0 et 1, mais par overfitting et ne respecte
     pas le prior !!
 
-TODO: imposer une nouvelle loss pour respecter le prior
+la loss sup est instables mais parfois a 1E-6, malgre une repartition stable de 25% !
+C'est normal !!!!!!!! car on train en oversampling 3x samples positifs
+
+TODO:
+- ajouter loss pour forcer posterior
+- diminuer le LR ou ajouter regul
 
 -----------
 24 oct 2025

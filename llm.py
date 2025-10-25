@@ -80,7 +80,8 @@ def sft(cl, wp0=1.):
     labOK = torch.LongTensor([0]).to(dev)
     labKO = torch.LongTensor([1]).to(dev)
     lossf = nn.CrossEntropyLoss()
-    opt = torch.optim.Adam(model.parameters(),lr=0.001)
+    supopt = torch.optim.Adam(model.parameters(),lr=0.0001)
+    unsupopt = torch.optim.Adam(model.parameters(),lr=0.0001)
     okidx = []
     koidx = []
     for xi in range(len(ds['train'])):
@@ -105,7 +106,7 @@ def sft(cl, wp0=1.):
         nOK, nKO = 0, 0
         supscores = []
         for xi in range(len(tridx)):
-            opt.zero_grad()
+            supopt.zero_grad()
             if ds['train'][tridx[xi]]['intent']==cl: lab=labOK
             else: lab=labKO
             s = ds['train']['cleaned_cite_text'][tridx[xi]]
@@ -132,7 +133,7 @@ def sft(cl, wp0=1.):
             lo += loss.item()
             print("sampleLOSS",loss.item(),ep,xi,"batch",len(tridx))
             loss.backward()
-            opt.step()
+            supopt.step()
         lo /= float(len(tridx))
         print("SFTLOSS",lo,ep)
  
@@ -185,19 +186,22 @@ def sft(cl, wp0=1.):
                 print("THRSUP",cok[0],cok[1],cko[0],cko[1])
             lo=0.
             for s in ss:
-                opt.zero_grad()
+                unsupopt.zero_grad()
                 utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                 x = toker(utt, return_tensors="pt").to(dev)
                 print("ucontextlen",x['input_ids'].shape,len(utt))
                 y=model(**x)
                 yy = y.logits[0,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
-                if sc0>thr: loss = -sc0 * wp0
-                else: loss = sc0 * wp0
+                # loss de separation
+                # les loss sont des probas, donc on veut faire tendre la classe 0 vers 1 et la class 1 vers 0,
+                # ce qui garantit la separabilite et le respect du prior0
+                if sc0>thr: loss = (1.-sc0)*(1.-sc0) * wp0
+                else: loss = sc0 * sc0 * wp0
                 lo += loss.item()
                 print("sampleunsuploss",loss.item(),torch.cuda.mem_get_info()[0])
                 loss.backward()
-                opt.step()
+                unsupopt.step()
             lo /= float(len(ss))
             print("UNSUPLOSS",lo,ep)
             # risk = unsuprisk.UnsupRisk(prior0)
