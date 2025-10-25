@@ -186,6 +186,7 @@ def sft(cl, wp0=1.):
                 print("THRSUP",cok[0],cok[1],cko[0],cko[1])
             lo=0.
             for s in ss:
+                print("UNSUPUTT",ep,s)
                 unsupopt.zero_grad()
                 utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                 x = toker(utt, return_tensors="pt").to(dev)
