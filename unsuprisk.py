@@ -40,7 +40,7 @@ def binrisk(mu0, mu1, var0, var1, prior0):
         nor0 = torch.distributions.normal.Normal(mu0,sigma0)
         mor0 = torch.exp(nor0.log_prob(torch.Tensor([-1.]).view(-1,).to(mu0.device)))
         nor1 = torch.distributions.normal.Normal(mu1,sigma1)
-        mor1 = torch.exp(nor1.log_prob(torch.Tensor([1.]).view(-1,)/to(mu1.device)))
+        mor1 = torch.exp(nor1.log_prob(torch.Tensor([1.]).view(-1,).to(mu1.device)))
         prior1 = 1.-prior0
 
         m = mu0+1.
