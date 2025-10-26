@@ -8,6 +8,8 @@ dim. 26 oct. 2025 07:34:46 CET
   donc mon unsup training peut etre vu comme du self-training: il ne faudrait donc pas train tous les samples
   mais seulement ceux dont on est moyennement sur, i.e., dont la proba est a mi-chemin entre 0.5 et 0/1.
 
+TODO: select semi-hard unsup samples to train only on them
+
 -----------
 sam. 25 oct. 2025 07:18:43 CEST
 
