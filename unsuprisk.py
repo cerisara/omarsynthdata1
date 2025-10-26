@@ -115,10 +115,10 @@ class IncUnsupRisk():
 
         newmuaccneg = self.muaccneg + (1.-postpos) * score1sample
         newmuaccpos = self.muaccpos + postpos * score1sample
-        newvaraccneg = slf.varaccneg + (1.-postpos) * (score1sample * score1sample)
-        newvaraccpos = slf.varaccpos + postpos * (score1sample * score1sample)
+        newvaraccneg = self.varaccneg + (1.-postpos) * (score1sample * score1sample)
+        newvaraccpos = self.varaccpos + postpos * (score1sample * score1sample)
         newnpos = self.npos + postpos
-        newnneg = self.nneg + (1.-postneg)
+        newnneg = self.nneg + (1.-postpos)
         newmuneg = newmuaccneg / newnneg
         newmupos = newmuaccpos / newnpos
         newvarneg = 0.1 + newvaraccneg/newnneg - newmuneg*newmuneg
