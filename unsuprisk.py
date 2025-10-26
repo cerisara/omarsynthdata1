@@ -71,7 +71,7 @@ def binrisk(mu0, mu1, var0, var1, prior0):
         return r
 
 def loggauss(x,m,v):
-    return logp = -0.5*(math.log(v)+math.log(2.*math.pi)+(x-m)*(x-m)/v)
+    return -0.5*(math.log(v)+math.log(2.*math.pi)+(x-m)*(x-m)/v)
 
 # une maniere incrementale de train est de calculer les mu/var accus sur un batch en mode inference, puis 
 # de mettre a jour mu/var avec 1 sample en mode train, et calculer le risk
@@ -104,8 +104,9 @@ class IncUnsupRisk():
             self.nneg = nneg
             self.muneg = self.muaccneg/nneg
             self.mupos = self.muaccpos/npos
-            self.varneg = self.varaccneg/nneg - self.muneg
-            self.varpos = self.varaccpos/npos - self.mupos
+            self.varneg = 0.1 + self.varaccneg/nneg - self.muneg*self.muneg
+            self.varpos = 0.1 + self.varaccpos/npos - self.mupos*self.mupos
+            print("URISK meansvar",self.mupos, self.varpos, self.muneg, self.varneg)
 
         gammaneg = (1.-self.p0) * math.exp(loggauss(score1sample.item(), self.muneg, self.varneg))
         gammapos = self.p0 * math.exp(loggauss(score1sample.item(), self.mupos, self.varpos))
@@ -120,8 +121,8 @@ class IncUnsupRisk():
         newnneg = self.nneg + (1.-postneg)
         newmuneg = newmuaccneg / newnneg
         newmupos = newmuaccpos / newnpos
-        newvarneg = newvaraccneg/newnneg - newmuneg
-        newvarpos = newvaraccpos/newnpos - newmupos
+        newvarneg = 0.1 + newvaraccneg/newnneg - newmuneg*newmuneg
+        newvarpos = 0.1 + newvaraccpos/newnpos - newmupos*newmupos
         l = binrisk(newmuneg,newmupos,newvarneg,newvarpos,self.p0)
         return l 
  

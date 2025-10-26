@@ -139,8 +139,8 @@ def sft(cl, wp0=1.):
                     x = toker(utt, return_tensors="pt").to(dev)
                     y=model(**x)
                     yy = y.logits[0,-1,[tokyes,tokno]]
-                    sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
-                    print("SCOREUNSUP",sc0,ep)
+                    sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
+                    print("SCOREUNSUP",sc0.item(),ep)
                     urisk.update(sc0)
 
             lo=0.
