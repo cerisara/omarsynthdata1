@@ -38,13 +38,13 @@ def binrisk(mu0, mu1, var0, var1, prior0):
         sigma0 = torch.sqrt(var0)
         sigma1 = torch.sqrt(var1)
         nor0 = torch.distributions.normal.Normal(mu0,sigma0)
-        mor0 = torch.exp(nor0.log_prob(-1.))
+        mor0 = torch.exp(nor0.log_prob(torch.Tensor([-1.]).view(-1,).to(mu0.device)))
         nor1 = torch.distributions.normal.Normal(mu1,sigma1)
-        mor1 = torch.exp(nor1.log_prob(1.))
+        mor1 = torch.exp(nor1.log_prob(torch.Tensor([1.]).view(-1,)/to(mu1.device)))
         prior1 = 1.-prior0
 
         m = mu0+1.
-        r = torch.mul(prior0/2.,m)
+        r = m*prior0/2.
         mm = -mu0-1.
         nn = torch.mul(sq2,sigma0)
         mm = torch.div(mm,nn)
@@ -53,19 +53,19 @@ def binrisk(mu0, mu1, var0, var1, prior0):
         term1 = torch.mul(r,mm)
         r = term1
 
-        term2 = torch.mul(prior0,var0)
+        term2 = var0 * prior0
         term2 = torch.mul(term2,mor0)
         r = r+term2
 
         m3 = 1.-mu1
-        term3 = torch.mul(prior1/2.,m3)
+        term3 = m3*prior1/2.
         nn3 = torch.mul(sq2,sigma1)
         mm3 = torch.div(m3,nn3)
         mm3 = 1. + torch.erf(mm3)
         term3 = torch.mul(term3,mm3)
         r = r+term3
 
-        term4 = torch.mul(prior1,var1)
+        term4 = prior1*var1
         term4 = torch.mul(term4,mor1)
         r = r+term4
         return r
