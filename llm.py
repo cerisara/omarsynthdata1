@@ -102,8 +102,6 @@ def sft(cl, wp0=1.):
 
         # partie SFT de la loss
         lo = 0.
-        m0OK, m0KO = 0., 0.
-        nOK, nKO = 0, 0
         supscores = []
         for xi in range(len(tridx)):
             supopt.zero_grad()
@@ -123,12 +121,6 @@ def sft(cl, wp0=1.):
             sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
             supscores.append((sc0,lab.item()))
             print("SCORESUP",sc0,lab.item(),ep,xi)
-            if lab==0:
-                nOK += 1
-                m0OK += sc0
-            else:
-                nKO += 1
-                m0KO += sc0
             loss = lossf(yy.view(1,-1),lab.view(1,))
             lo += loss.item()
             print("sampleLOSS",loss.item(),ep,xi,"batch",len(tridx))
@@ -137,53 +129,20 @@ def sft(cl, wp0=1.):
         lo /= float(len(tridx))
         print("SFTLOSS",lo,ep)
  
-        # fix le prior: dans unsuprisk, la classe 0 est la minoritaire
-        # j'ai calcule la moyenne m(0,OK) des output 0 du MLP pour la classe 0 et pour la classe 1 m(0,KO)
-        # si m(0,OK)>m(0,KO), alors il faut inverser les outputs du MLP
-        m0OK /= float(nOK)
-        m0KO /= float(nKO)
-        if False and m0OK>m0KO:
-            # non, car je sais que tokYES a l'idx 0 !!
-            out0idx = 1
-        else: out0idx = 0
-        print("OUT0",out0idx,wp0,m0OK,m0KO,nOK,nKO) 
-
         if dounsup:
             random.shuffle(arxes)
             ss = arxes[:1024] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
-            allscores = []
+            urisk = unsuprisk.IncUnsupRisk(prior0)
             with torch.no_grad():
                 for s in ss:
                     utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
                     x = toker(utt, return_tensors="pt").to(dev)
                     y=model(**x)
                     yy = y.logits[0,-1,[tokyes,tokno]]
-                    print("debugunsup",yy)
                     sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0].item()
                     print("SCOREUNSUP",sc0,ep)
-                    allscores.append(sc0)
-            allscores.sort()
-            xmin, xmax = allscores[0], allscores[-1]
-            n = int(prior0 * len(allscores))
-            thr = allscores[-n]
-            # pourquoi on a des probas(0) ramassees dans un minuscule intervalle, qui change de position a chaque epoch ?
-            # c'est comme si notre LLM output une proba independante de la phrase en input !
-            # alors que le score sur la partie labeled span tout l'intervalle 0-1
-            # ==> car sur la partie SUP, il train en meme temps: le LLM change ses poids, ce qui change l'output:
-            # la variabilite du SUP est due au chgt des poids, pas au changement des phrases !!
-            # donc le train modifie surtout le biais (= prior) du YES vs NO: TODO: ce n'est pas un bon training !!!
-            print("NORMSCORES",xmin, xmax, thr,n,len(allscores))
-            if True:
-                # check
-                cok,cko = [0,0],[0,0]
-                for s,lab in supscores:
-                    if lab==0:
-                        if s<thr: cok[0] += 1
-                        else: cok[1] += 1
-                    else:
-                        if s<thr: cko[0] += 1
-                        else: cko[1] += 1
-                print("THRSUP",cok[0],cok[1],cko[0],cko[1])
+                    urisk.update(sc0)
+
             lo=0.
             for s in ss:
                 print("UNSUPUTT",ep,s)
@@ -194,22 +153,13 @@ def sft(cl, wp0=1.):
                 y=model(**x)
                 yy = y.logits[0,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
-                # loss de separation
-                # les loss sont des probas, donc on veut faire tendre la classe 0 vers 1 et la class 1 vers 0,
-                # ce qui garantit la separabilite et le respect du prior0
-                if sc0>thr: loss = (1.-sc0)*(1.-sc0) * wp0
-                else: loss = sc0 * sc0 * wp0
+                loss = wp0 * urisk.train(sc0)
                 lo += loss.item()
                 print("sampleunsuploss",loss.item(),torch.cuda.mem_get_info()[0])
                 loss.backward()
                 unsupopt.step()
             lo /= float(len(ss))
             print("UNSUPLOSS",lo,ep)
-            # risk = unsuprisk.UnsupRisk(prior0)
-            # uloss = risk(allscores)
-            # uloss = uloss * wp0
-            # uloss.backward()
-            # opt.step()
 
         # evaluation
         with torch.no_grad():

@@ -28,6 +28,8 @@ def plothisto(scores, prefix):
     centers = [(binedges[i]+binedges[i+1])/2. for i in range(len(binedges)-1)]
     for i in range(len(hist)): print(prefix+" %f %f" % (centers[i], hist[i]))
 
+
+
 def binrisk(mu0, mu1, var0, var1, prior0):
     # we must have a single "sample" here !
     with torch.set_grad_enabled(True):
@@ -68,6 +70,61 @@ def binrisk(mu0, mu1, var0, var1, prior0):
         r = r+term4
         return r
 
+def loggauss(x,m,v):
+    return logp = -0.5*(math.log(v)+math.log(2.*math.pi)+(x-m)*(x-m)/v)
+
+# une maniere incrementale de train est de calculer les mu/var accus sur un batch en mode inference, puis 
+# de mettre a jour mu/var avec 1 sample en mode train, et calculer le risk
+class IncUnsupRisk():
+    def __init__(self, p0):
+        self.p0 = p0
+        self.xs = []
+        self.mupos = None
+
+    def update(self, score1sample):
+        # il faut call update plusieurs fois pour initialiser les gaussiennes avant de train()
+        self.xs.append(score1sample.item())
+
+    def train(self, score1sample):
+        # score must be a Tensor with grad here, while it is used as a scalar in update()
+        if self.mupos==None:
+            xmin, xmax = min(self.xs), max(self.xs)
+            xmax = xmax - xmin
+            xn = [(x-xmin)/xmax for x in self.xs]
+            xn.sort()
+            npos = int(self.p0 * len(xn))
+            nneg = len(xn)-npos
+            # 0 .. (negs) .. xn[-npos] .. (pos) 1
+            thr = xn[-npos]
+            self.muaccneg = sum([xn[i] for i in range(nneg)])
+            self.muaccpos = sum([xn[-i] for i in range(npos)])
+            self.varaccneg = sum([xn[i]*xn[i] for i in range(nneg)])
+            self.varaccpos = sum([xn[-i]*xn[-i] for i in range(npos)])
+            self.npos = npos
+            self.nneg = nneg
+            self.muneg = self.muaccneg/nneg
+            self.mupos = self.muaccpos/npos
+            self.varneg = self.varaccneg/nneg - self.muneg
+            self.varpos = self.varaccpos/npos - self.mupos
+
+        gammaneg = (1.-self.p0) * math.exp(loggauss(score1sample.item(), self.muneg, self.varneg))
+        gammapos = self.p0 * math.exp(loggauss(score1sample.item(), self.mupos, self.varpos))
+        postpos = gammapos/(gammapos+gammaneg)
+        # up to now, everything was scalar; from now on, we insert Tensor for training with grads
+
+        newmuaccneg = self.muaccneg + (1.-postpos) * score1sample
+        newmuaccpos = self.muaccpos + postpos * score1sample
+        newvaraccneg = slf.varaccneg + (1.-postpos) * (score1sample * score1sample)
+        newvaraccpos = slf.varaccpos + postpos * (score1sample * score1sample)
+        newnpos = self.npos + postpos
+        newnneg = self.nneg + (1.-postneg)
+        newmuneg = newmuaccneg / newnneg
+        newmupos = newmuaccpos / newnpos
+        newvarneg = newvaraccneg/newnneg - newmuneg
+        newvarpos = newvaraccpos/newnpos - newmupos
+        l = binrisk(newmuneg,newmupos,newvarneg,newvarpos,self.p0)
+        return l 
+ 
 # version du loss sans GMM explicite
 # aucun parametre !
 class UnsupRisk(nn.Module):

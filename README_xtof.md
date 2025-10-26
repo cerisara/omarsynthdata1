@@ -1,5 +1,14 @@
 
 -----------
+dim. 26 oct. 2025 07:34:46 CET
+
+- au cours du training, on se retrouve avec 2 pics de scores a 0 et 1: ce n'est pas bon, car pour ameliorer, il
+  faut faire 'sauter' des samples d'un pic à l'autre, cela devient de la RO
+- le score = Le LLM retourne une proba qui peut etre vue comme un silver label (le LLM est-il calibrated ?)
+  donc mon unsup training peut etre vu comme du self-training: il ne faudrait donc pas train tous les samples
+  mais seulement ceux dont on est moyennement sur, i.e., dont la proba est a mi-chemin entre 0.5 et 0/1.
+
+-----------
 sam. 25 oct. 2025 07:18:43 CEST
 
 - le testF1 atteint un max (50% à 65%) entre 100 et 150 epochs sur chaque run, puis il diminue; mais tres variable !
