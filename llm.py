@@ -11,6 +11,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 dev = "cuda"
+dounsup = False
 dounsup = True
 
 class Metric:
@@ -70,7 +71,29 @@ if dounsup:
     arxes = [s for s in arxs if len(s)<1500]
     arxs = None
 
-def sft(cl, wp0=1.):
+def zsl(model,toker,ds,tokyes,tokno,cl):
+    with torch.no_grad():
+        metric = Metric()
+        cnn=[0,0]
+        for i in range(len(ds['test'])):
+            s = ds['test']['cleaned_cite_text'][i]
+            utt = f"{s}. The previous sentence is extracted from a scientific paper. Is @@CITATION used to motivate a potential future work, yes or no? Just answer with a single word, yes or no. Answer:"
+            x = toker(utt, return_tensors="pt").to(dev)
+            y=model(**x)
+            yy = y.logits[0,-1,[tokyes,tokno]]
+            cpred = torch.argmax(yy)
+            lab = ds['test'][i]['intent']
+            if lab==cl: lab=0
+            else: lab=1
+            cnn[cpred.item()]+=1
+            metric.update(cpred.item(),lab)
+            print("TESTREC",cpred.item(),lab)
+        print("TENN",cnn[0],cnn[1])
+        f1s = metric.getF1()
+        print("TEclF1s",f1s)
+    exit()
+
+def sft(cl, w0=1.):
     model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B").to(dev)
     toker = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     tokyes = toker(" Yes")['input_ids'][0]
@@ -90,6 +113,8 @@ def sft(cl, wp0=1.):
     prior0 = float(len(okidx))/float(len(ds['train']))
     print("PRIOR0",prior0)
     assert prior0>0 and prior0<0.5 # assume tgt = classe minoritaire
+
+    # zsl(model,toker,ds,tokyes,tokno,cl)
 
     allf1s = []
     teallf1s = []
@@ -153,11 +178,14 @@ def sft(cl, wp0=1.):
                 y=model(**x)
                 yy = y.logits[0,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
-                loss = wp0 * urisk.train(sc0)
-                lo += loss.item()
-                print("sampleunsuploss",loss.item(),torch.cuda.mem_get_info()[0])
-                loss.backward()
-                unsupopt.step()
+                uloss, postpos = urisk.train(sc0)
+                if postpos>0.8:
+                    # mode self-training avec self-confidence
+                    loss = w0 * uloss
+                    lo += loss.item()
+                    print("sampleunsuploss",loss.item(),torch.cuda.mem_get_info()[0], postpos)
+                    loss.backward()
+                    unsupopt.step()
             lo /= float(len(ss))
             print("UNSUPLOSS",lo,ep)
 
@@ -218,7 +246,7 @@ def sft(cl, wp0=1.):
 
 if __name__ == "__main__":
     if len(sys.argv)>1: w0 = float(sys.argv[1])
-    else: w0 = 0.01
+    else: w0 = 0.001
 
     # attention: il y a du code qui a deja run ci-dessus !
 

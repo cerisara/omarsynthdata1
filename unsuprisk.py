@@ -90,12 +90,14 @@ class IncUnsupRisk():
         if self.mupos==None:
             xmin, xmax = min(self.xs), max(self.xs)
             xmax = xmax - xmin
+            self.xmin = xmin
+            self.xmax = xmax
             xn = [(x-xmin)/xmax for x in self.xs]
             xn.sort()
             npos = int(self.p0 * len(xn))
             nneg = len(xn)-npos
             # 0 .. (negs) .. xn[-npos] .. (pos) 1
-            thr = xn[-npos]
+            self.thr = xn[-npos]
             self.muaccneg = sum([xn[i] for i in range(nneg)])
             self.muaccpos = sum([xn[-i] for i in range(npos)])
             self.varaccneg = sum([xn[i]*xn[i] for i in range(nneg)])
@@ -108,15 +110,17 @@ class IncUnsupRisk():
             self.varpos = 0.1 + self.varaccpos/npos - self.mupos*self.mupos
             print("URISK meansvar",self.mupos, self.varpos, self.muneg, self.varneg)
 
-        gammaneg = (1.-self.p0) * math.exp(loggauss(score1sample.item(), self.muneg, self.varneg))
-        gammapos = self.p0 * math.exp(loggauss(score1sample.item(), self.mupos, self.varpos))
+        sc = (score1sample.item() - self.xmin)/self.xmax
+        gammaneg = (1.-self.p0) * math.exp(loggauss(sc, self.muneg, self.varneg))
+        gammapos = self.p0 * math.exp(loggauss(sc, self.mupos, self.varpos))
         postpos = gammapos/(gammapos+gammaneg)
         # up to now, everything was scalar; from now on, we insert Tensor for training with grads
 
-        newmuaccneg = self.muaccneg + (1.-postpos) * score1sample
-        newmuaccpos = self.muaccpos + postpos * score1sample
-        newvaraccneg = self.varaccneg + (1.-postpos) * (score1sample * score1sample)
-        newvaraccpos = self.varaccpos + postpos * (score1sample * score1sample)
+        sc = (score1sample - self.xmin)/self.xmax
+        newmuaccneg = self.muaccneg + (1.-postpos) * sc
+        newmuaccpos = self.muaccpos + postpos * sc
+        newvaraccneg = self.varaccneg + (1.-postpos) * (sc * sc)
+        newvaraccpos = self.varaccpos + postpos * (sc * sc)
         newnpos = self.npos + postpos
         newnneg = self.nneg + (1.-postpos)
         newmuneg = newmuaccneg / newnneg
@@ -124,7 +128,7 @@ class IncUnsupRisk():
         newvarneg = 0.1 + newvaraccneg/newnneg - newmuneg*newmuneg
         newvarpos = 0.1 + newvaraccpos/newnpos - newmupos*newmupos
         l = binrisk(newmuneg,newmupos,newvarneg,newvarpos,self.p0)
-        return l 
+        return l, postpos
  
 # version du loss sans GMM explicite
 # aucun parametre !
