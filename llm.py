@@ -154,7 +154,8 @@ def sft(cl, w0=1.):
         lo /= float(len(tridx))
         print("SFTLOSS",lo,ep)
  
-        if dounsup:
+        if dounsup and ep>100:
+            # first train SFT, then inject unsup
             random.shuffle(arxes)
             ss = arxes[:1024] # pick random batch of 1024 samples: on a 3% ==> 30 samples positifs
             urisk = unsuprisk.IncUnsupRisk(prior0)
@@ -179,7 +180,7 @@ def sft(cl, w0=1.):
                 yy = y.logits[0,-1,[tokyes,tokno]]
                 sc0 = torch.nn.functional.softmax(yy, dim=-1).view(-1,)[0]
                 uloss, postpos = urisk.train(sc0)
-                if postpos>0.8:
+                if postpos>-1:
                     # mode self-training avec self-confidence
                     loss = w0 * uloss
                     lo += loss.item()
