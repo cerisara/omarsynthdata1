@@ -113,7 +113,11 @@ class IncUnsupRisk():
         sc = (score1sample.item() - self.xmin)/self.xmax
         gammaneg = (1.-self.p0) * math.exp(loggauss(sc, self.muneg, self.varneg))
         gammapos = self.p0 * math.exp(loggauss(sc, self.mupos, self.varpos))
-        postpos = gammapos/(gammapos+gammaneg)
+        if math.abs(gammapos+gammaneg)<0.01:
+            if (gammapos>gammaneg): postpos = 0.8
+            elif (gammapos<gammaneg): postpos = 0.2
+            else: postpos = 0.5
+        else: postpos = gammapos/(gammapos+gammaneg)
         # up to now, everything was scalar; from now on, we insert Tensor for training with grads
 
         sc = (score1sample - self.xmin)/self.xmax
